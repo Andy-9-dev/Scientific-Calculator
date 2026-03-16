@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CALC-9000</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --panel: #10141c;
+    --panel2: #161b26;
+    --border: #1e2a3a;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --green: #00ff9d;
+    --text: #e8f4f8;
+    --muted: #4a6070;
+    --btn-num: #141c28;
+    --btn-fn: #0d1a2a;
+    --btn-op: #0d1520;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Exo 2', sans-serif;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.04) 0%, transparent 50%);
+  }
+  .calculator {
+    width: 420px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.8), 0 0 60px rgba(0,212,255,0.05);
+    position: relative;
+  }
+  .calculator::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .header {
+    padding: 16px 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .controls { display: flex; gap: 8px; align-items: center; }
+  .dark-toggle, .history-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: var(--muted);
+    font-size: 10px;
+    font-family: 'Exo 2', sans-serif;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .dark-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .history-toggle:hover { border-color: var(--accent2); color: var(--accent2); }
+  .display {
+    padding: 20px 24px 16px;
+    background: var(--panel2);
+    border-bottom: 1px solid var(--border);
+    min-height: 120px;
+    position: relative;
+    overflow: hidden;
+  }
+  .display::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(0,212,255,0.015) 28px, rgba(0,212,255,0.015) 29px);
+    pointer-events: none;
+  }
+  .expression {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 22px;
+    text-align: right;
+    letter-spacing: 1px;
+    word-break: break-all;
+    transition: all 0.2s;
+  }
+  .result {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 38px;
+    color: var(--text);
+    text-align: right;
+    margin-top: 8px;
+    letter-spacing: -1px;
+    word-break: break-all;
+    transition: all 0.15s;
+    text-shadow: 0 0 30px rgba(0,212,255,0.2);
+  }
+  .result.error { color: var(--accent2); font-size: 20px; }
+  .result.flash { color: var(--green); text-shadow: 0 0 20px rgba(0,255,157,0.5); }
+  .mode-indicator {
+    position: absolute;
+    top: 12px; left: 24px;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    opacity: 0.6;
+    text-transform: uppercase;
+  }
+  .history-panel {
+    background: #0c1018;
+    border-bottom: 1px solid var(--border);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  .history-panel.open { max-height: 180px; }
+  .history-inner {
+    padding: 12px 20px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .history-inner::-webkit-scrollbar { width: 4px; }
+  .history-inner::-webkit-scrollbar-track { background: transparent; }
+  .history-inner::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .history-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 12px;
+  }
+  .history-item:hover { background: rgba(0,212,255,0.06); }
+  .history-expr { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-res { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .no-history { color: var(--muted); font-size: 11px; text-align: center; padding: 16px 0; letter-spacing: 1px; }
+  .buttons {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .btn {
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 0;
+    height: 52px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.08s, box-shadow 0.15s, border-color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    letter-spacing: 0.5px;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.15s;
+    border-radius: inherit;
+  }
+  .btn:active { transform: scale(0.94); }
+  .btn:active::after { background: rgba(255,255,255,0.08); }
+  .btn.ripple-anim::before {
+    content: '';
+    position: absolute;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    animation: ripple 0.4s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes ripple { to { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+  .btn-num { background: var(--btn-num); color: var(--text); }
+  .btn-num:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .btn-op { background: linear-gradient(135deg, #0f2040, #0a1830); color: var(--accent); border-color: rgba(0,212,255,0.15); }
+  .btn-op:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0,212,255,0.2); }
+  .btn-fn { background: linear-gradient(135deg, #130d22, #0e0a1c); color: #a78bfa; border-color: rgba(124,58,237,0.15); font-size: 12px; font-weight: 600; }
+  .btn-fn:hover { border-color: #7c3aed; box-shadow: 0 0 16px rgba(124,58,237,0.2); }
+  .btn-eq {
+    background: linear-gradient(135deg, var(--accent), #0099cc);
+    color: #000;
+    border: none;
+    font-size: 22px;
+    font-weight: 800;
+    grid-column: span 2;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+  }
+  .btn-eq:hover { box-shadow: 0 6px 28px rgba(0,212,255,0.5); transform: translateY(-1px); }
+  .btn-eq:active { transform: scale(0.97) translateY(0); }
+  .btn-clear { background: linear-gradient(135deg, #2a0f0f, #1a0808); color: #ff6b6b; border-color: rgba(255,107,107,0.2); font-size: 12px; }
+  .btn-clear:hover { border-color: #ff6b6b; box-shadow: 0 0 16px rgba(255,107,107,0.2); }
+  .btn-special { background: linear-gradient(135deg, #1a1a0f, #12120a); color: #fbbf24; border-color: rgba(251,191,36,0.15); font-size: 12px; }
+  .btn-special:hover { border-color: #fbbf24; box-shadow: 0 0 16px rgba(251,191,36,0.2); }
+  .btn-zero { grid-column: span 2; }
+
+  /* Light mode */
+  body.light { background: #f0f4f8; background-image: radial-gradient(ellipse at 20% 50%, rgba(0,100,200,0.05) 0%, transparent 50%); }
+  body.light .calculator { background: #ffffff; border-color: #e0e8f0; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  body.light .calculator::before { background: linear-gradient(90deg, transparent, #0066cc, transparent); }
+  body.light .display { background: #f7fafc; }
+  body.light .result { color: #1a2a3a; text-shadow: none; }
+  body.light .expression { color: #7a9ab0; }
+  body.light .mode-indicator { color: #0066cc; }
+  body.light .btn-num { background: #f0f4f8; color: #1a2a3a; border-color: #dce8f0; }
+  body.light .btn-num:hover { border-color: #aac4d8; }
+  body.light .btn-op { background: linear-gradient(135deg, #e8f4ff, #d8ecff); color: #0066cc; border-color: #a0c8f0; }
+  body.light .btn-fn { background: linear-gradient(135deg, #f0e8ff, #e8d8ff); color: #6630cc; border-color: #c0a0e8; }
+  body.light .btn-clear { background: linear-gradient(135deg, #fff0f0, #ffe0e0); color: #cc3333; border-color: #f0a0a0; }
+  body.light .btn-special { background: linear-gradient(135deg, #fffce8, #fff5d0); color: #cc8800; border-color: #e8d080; }
+  body.light .history-panel { background: #f7fafc; border-bottom-color: #e0e8f0; }
+  body.light .history-label { color: #7a9ab0; }
+  body.light .history-expr { color: #7a9ab0; }
+  body.light .header { border-bottom-color: #e0e8f0; }
+  body.light .dark-toggle, body.light .history-toggle { border-color: #dce8f0; color: #7a9ab0; }
+  body.light .logo { color: #0066cc; }
+  body.light .footer { border-top-color: #e0e8f0; }
+
+  .footer {
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+  }
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    color: var(--muted);
+    font-size: 10px;
+    font-family: 'Exo 2', sans-serif;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { border-color: var(--green); color: var(--green); }
+  .kbd-hint { font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="calculator" id="calc">
+  <div class="header">
+    <span class="logo">CALC-9000</span>
+    <div class="controls">
+      <button class="history-toggle" onclick="toggleHistory()">HISTORY</button>
+      <button class="dark-toggle" onclick="toggleTheme()">LIGHT</button>
+    </div>
+  </div>
+  <div class="display">
+    <div class="mode-indicator" id="modeInd">RAD</div>
+    <div class="expression" id="expression"></div>
+    <div class="result" id="result">0</div>
+  </div>
+  <div class="history-panel" id="historyPanel">
+    <div class="history-inner">
+      <div class="history-label">RECENT CALCULATIONS</div>
+      <div id="historyList"><div class="no-history">No calculations yet</div></div>
+    </div>
+  </div>
+  <div class="buttons">
+    <button class="btn btn-fn" data-val="sin(">sin</button>
+    <button class="btn btn-fn" data-val="cos(">cos</button>
+    <button class="btn btn-fn" data-val="tan(">tan</button>
+    <button class="btn btn-fn" data-val="log(">log</button>
+    <button class="btn btn-fn" data-val="ln(">ln</button>
+    <button class="btn btn-fn" data-val="sqrt(">√x</button>
+    <button class="btn btn-fn" data-val="^2">x²</button>
+    <button class="btn btn-fn" data-val="^">xʸ</button>
+    <button class="btn btn-fn" data-val="(">( </button>
+    <button class="btn btn-fn" data-val=")"> )</button>
+    <button class="btn btn-special" data-val="pi">π</button>
+    <button class="btn btn-special" data-val="e">e</button>
+    <button class="btn btn-fn" data-val="abs(">|x|</button>
+    <button class="btn btn-clear" onclick="backspace()">⌫</button>
+    <button class="btn btn-clear" onclick="clearAll()">AC</button>
+    <button class="btn btn-num" data-val="7">7</button>
+    <button class="btn btn-num" data-val="8">8</button>
+    <button class="btn btn-num" data-val="9">9</button>
+    <button class="btn btn-op" data-val="/">÷</button>
+    <button class="btn btn-op" data-val="%">%</button>
+    <button class="btn btn-num" data-val="4">4</button>
+    <button class="btn btn-num" data-val="5">5</button>
+    <button class="btn btn-num" data-val="6">6</button>
+    <button class="btn btn-op" data-val="*">×</button>
+    <button class="btn btn-fn" onclick="toggleMode()">DEG</button>
+    <button class="btn btn-num" data-val="1">1</button>
+    <button class="btn btn-num" data-val="2">2</button>
+    <button class="btn btn-num" data-val="3">3</button>
+    <button class="btn btn-op" data-val="-">−</button>
+    <button class="btn btn-op" data-val="+">+</button>
+    <button class="btn btn-num btn-zero" data-val="0">0</button>
+    <button class="btn btn-num" data-val=".">.</button>
+    <button class="btn btn-eq" onclick="calculate()">=</button>
+  </div>
+  <div class="footer">
+    <span class="kbd-hint">⌨ KEYBOARD READY</span>
+    <button class="copy-btn" onclick="copyResult()">COPY RESULT</button>
+  </div>
+</div>
+
+<script>
+let expr = '';
+let isRadians = true;
+let history = [];
+let historyOpen = false;
+let isDark = true;
+
+const exprEl = document.getElementById('expression');
+const resultEl = document.getElementById('result');
+const modeEl = document.getElementById('modeInd');
+
+function ripple(btn) {
+  btn.classList.remove('ripple-anim');
+  void btn.offsetWidth;
+  btn.classList.add('ripple-anim');
+  setTimeout(() => btn.classList.remove('ripple-anim'), 400);
+}
+
+document.querySelectorAll('.btn[data-val]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    ripple(this);
+    const v = this.dataset.val;
+    if (v === 'pi') expr += 'π';
+    else if (v === 'e') expr += 'ℯ';
+    else if (v === '^2') expr += '²';
+    else expr += v;
+    updateDisplay();
+  });
+});
+
+function updateDisplay() {
+  exprEl.textContent = expr || '';
+  if (!expr) resultEl.textContent = '0';
+}
+
+function clearAll() {
+  expr = '';
+  resultEl.textContent = '0';
+  exprEl.textContent = '';
+  resultEl.classList.remove('error', 'flash');
+}
+
+function backspace() {
+  expr = expr.slice(0, -1);
+  updateDisplay();
+  if (!expr) resultEl.textContent = '0';
+}
+
+function toggleMode() {
+  isRadians = !isRadians;
+  modeEl.textContent = isRadians ? 'RAD' : 'DEG';
+  document.querySelectorAll('.btn-fn').forEach(b => {
+    if (b.textContent === 'DEG' || b.textContent === 'RAD') b.textContent = isRadians ? 'DEG' : 'RAD';
+  });
+}
+
+function parseExpr(s) {
+  s = s.replace(/π/g, 'Math.PI')
+       .replace(/ℯ/g, 'Math.E')
+       .replace(/²/g, '**2')
+       .replace(/\^/g, '**')
+       .replace(/÷/g, '/')
+       .replace(/×/g, '*')
+       .replace(/−/g, '-');
+  const trigFn = (fn, jsName) => {
+    const re = new RegExp(fn + '\\(', 'g');
+    s = isRadians ? s.replace(re, jsName + '(') : s.replace(re, jsName + '(Math.PI/180*');
+  };
+  trigFn('sin', 'Math.sin');
+  trigFn('cos', 'Math.cos');
+  trigFn('tan', 'Math.tan');
+  s = s.replace(/log\(/g, 'Math.log10(');
+  s = s.replace(/ln\(/g, 'Math.log(');
+  s = s.replace(/sqrt\(/g, 'Math.sqrt(');
+  s = s.replace(/abs\(/g, 'Math.abs(');
+  return s;
+}
+
+function calculate() {
+  if (!expr) return;
+  const original = expr;
+  try {
+    let processed = parseExpr(expr);
+    let res = Function('"use strict"; return (' + processed + ')')();
+    if (!isFinite(res)) throw new Error('Infinity');
+    let display = parseFloat(res.toPrecision(12)).toString();
+    resultEl.textContent = display;
+    resultEl.classList.remove('error');
+    resultEl.classList.add('flash');
+    setTimeout(() => resultEl.classList.remove('flash'), 400);
+    addHistory(original, display);
+    exprEl.textContent = original + ' =';
+    expr = display;
+  } catch(e) {
+    resultEl.textContent = 'ERR: Invalid';
+    resultEl.classList.add('error');
+    setTimeout(() => { resultEl.classList.remove('error'); resultEl.textContent = expr || '0'; }, 1500);
+  }
+}
+
+function addHistory(e, r) {
+  history.unshift({ expr: e, result: r });
+  if (history.length > 20) history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) { list.innerHTML = '<div class="no-history">No calculations yet</div>'; return; }
+  list.innerHTML = history.map((h, i) => `
+    <div class="history-item" onclick="useHistory(${i})">
+      <span class="history-expr">${h.expr}</span>
+      <span class="history-res">${h.result}</span>
+    </div>
+  `).join('');
+}
+
+function useHistory(i) {
+  expr = history[i].result;
+  resultEl.textContent = expr;
+  exprEl.textContent = history[i].expr + ' =';
+  resultEl.classList.remove('error');
+}
+
+function toggleHistory() {
+  historyOpen = !historyOpen;
+  document.getElementById('historyPanel').classList.toggle('open', historyOpen);
+}
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+  document.querySelector('.dark-toggle').textContent = isDark ? 'LIGHT' : 'DARK';
+}
+
+function copyResult() {
+  const val = resultEl.textContent;
+  if (val && val !== '0') {
+    navigator.clipboard.writeText(val).catch(() => {});
+    const btn = document.querySelector('.copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'COPIED ✓';
+    setTimeout(() => btn.textContent = orig, 1200);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') expr += e.key;
+  else if (e.key === '+') expr += '+';
+  else if (e.key === '-') expr += '-';
+  else if (e.key === '*') expr += '*';
+  else if (e.key === '/') { e.preventDefault(); expr += '/'; }
+  else if (e.key === '.') expr += '.';
+  else if (e.key === '(') expr += '(';
+  else if (e.key === ')') expr += ')';
+  else if (e.key === '%') expr += '%';
+  else if (e.key === '^') expr += '^';
+  else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calculate(); return; }
+  else if (e.key === 'Backspace') { backspace(); return; }
+  else if (e.key === 'Escape') { clearAll(); return; }
+  else return;
+  updateDisplay();
+});
+</script>
+</body>
+</html>
